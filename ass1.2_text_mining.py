@@ -142,10 +142,10 @@ test_feature = np.array([feature(d) for d in test_data])
 fc_size = 400
 input_size = 1000
 output_size = 10
-regularization_rate = 0.00001
-learning_rate = 0.00005
-batch_size = 256
-max_iter = 10000
+regularization_rate = 0.008
+learning_rate = 0.0001
+batch_size = 200
+max_iter = 20000
 #tensorflow learning hyperpatameters
 
 
