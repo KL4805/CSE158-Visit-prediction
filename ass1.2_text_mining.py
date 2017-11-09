@@ -52,8 +52,9 @@ wordCount = defaultdict(int)
 for d in data:
     review = ''.join(c for c in d['reviewText'].lower() if c not in punctuation)
     wordList = review.split()
+    wordList = [stemmer.stem(w) for w in wordList]
+    d['wordList'] = wordList
     for w in wordList:
-        #w = stemmer.stem(w)
         if w not in stopword:
             wordCount[w] += 1
 #first try not using stemmer
@@ -72,9 +73,9 @@ count = [(wordCount[w], w ) for w in wordCount]
 count.sort()
 count.reverse()
 
-commonWords = [count[i][1] for i in range(1000)]
+commonWords = [count[i][1] for i in range(1500)]
 wordDict = defaultdict(int)
-for i in range(1000):
+for i in range(1500):
     wordDict[commonWords[i]] = i
 
 #The 1000 most common words
@@ -93,28 +94,41 @@ validation_data = data[58000:70195]
 # In[11]:
 
 
+userList = []
+for d in train_data:
+    if d['userID'] not in userList:
+        userList.append(d['userID'])
+print len(userList)
+userDict = defaultdict(int)
+userAvg = [[] for u in userList]
+for i in range(len(userList)):
+    userDict[userList[i]] = i
+userHistory = [[0 for i in range(10)] for j in range(len(userList))]
+for d in train_data:
+    userHistory[userDict[d['userID']]][d['categoryID']] += 1.0
+    userAvg[userDict[d['userID']]].append(d['rating'])
+userAvg = [np.mean(l) for l in userAvg]
+userHistory = np.array(userHistory)
+print np.shape(userAvg)
 #calculate tf-idf
 #tf can be calculated when extracting feature
 #idf calculated here
-idf = [0 for i in range(1000)]
+idf = [0 for i in range(1500)]
 for d in train_data:
-    review = ''.join(c for c in d['reviewText'].lower() if c not in punctuation)
-    wordList = review.split()
-    for w in commonWords:
-        if w in wordList:
+
+    for w in d['wordList']:
+        if w in commonWords:
             idf[wordDict[w]] += 1.0
             
-idf = np.array([math.log(70195.0/f) for f in idf])
+idf = np.array([math.log(58000.0/f) for f in idf])
 
 
 # In[13]:
 
 def feature(datum):
     #count tf-idf
-    review = ''.join(c for c in d['reviewText'].lower() if c not in punctuation)
-    wordList = review.split()
-    tf = [0 for i in range(1000)]
-    for w in wordList:
+    tf = [0 for i in range(1500)]
+    for w in datum['wordList']:
         if w in commonWords:
             tf[wordDict[w]] += 1.0
     tf = np.array(tf)
@@ -123,6 +137,10 @@ def feature(datum):
     else:
         tf_ = tf
     tfidf = np.multiply(tf_,idf)
+    #if datum['userID'] in userList:
+    #    tfidf = np.concatenate((tfidf, userHistory[userDict[datum['userID']]]))
+    #else:
+    #    tfidf = np.concatenate((tfidf, np.array([0 for i in range(10)])))
     return tfidf
 
 
@@ -134,15 +152,20 @@ validation_feature = np.array([feature(d) for d in validation_data])
 test_data = []
 for l in readGz("test_Category.json.gz"):
     test_data.append(l)
+for d in test_data:
+    review = ''.join(c for c in d['reviewText'].lower() if c not in punctuation)
+    wordList = review.split()
+    wordList = [stemmer.stem(w) for w in wordList]
+    d['wordList'] = wordList
 test_feature = np.array([feature(d) for d in test_data])
 
 # In[15]:
 
 
-fc_size = 400
-input_size = 1000
+fc_size = 500
+input_size = 1500
 output_size = 10
-regularization_rate = 0.008
+regularization_rate = 0.006
 learning_rate = 0.0001
 batch_size = 200
 max_iter = 20000
