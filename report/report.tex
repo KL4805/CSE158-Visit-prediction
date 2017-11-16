@@ -1,0 +1,62 @@
+\documentclass{article}
+\usepackage{enumerate}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\geometry{a4paper,scale=0.7}
+\title{\bf CSE158 Assignment 1}
+\author{\bf Yilun Jin, A15361514}
+\setlength{\baselineskip}{24pt}
+
+\pagestyle{fancy}
+\lhead{}
+\chead{}
+\rhead{\bfseries Report for Google Local Predictions}
+\lfoot{Yilun Jin}
+\cfoot{Part 1: Visit Prediction}
+\rfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+ 
+
+\begin{document}
+%titlepage
+\thispagestyle{empty}
+\begin{center}
+\begin{minipage}{0.75\linewidth}
+    \centering
+
+
+%Thesis title
+	\vspace{4cm}
+    {{\LARGE Report for Google local visit prediction and category prediction\par}}
+    \vspace{4cm}
+%Author's name
+    {\Large Yilun Jin, A15361514\par}
+    \vspace{4cm}
+%Degree
+    {\Large A report submitted for course CSE 158, UC San Diego\par}
+    \vspace{4cm}
+%Date
+    {\Large November 2017}
+\end{minipage}
+\end{center}
+\clearpage
+
+
+\section{Visit Prediction}
+\subsection{Method Overview}
+The approach I took was basically trying to predict according to previous user activities and similarities between businesses, via a linear classification model. 
+
+\subsection{Feature Vector}
+The feature vector designed is a 21-dimensional vector comprising of the following data. 
+\begin{enumerate}
+\item The business's average rating. The higher it is, the more likely it will attract potential visitors. 
+\item The business's popularity, i.e. total times it was visited. 
+\item The user's activity level, i.e. total times the user visited businesses and left a review. 
+\end{enumerate}
+
+\end{document}
+
