@@ -14,7 +14,7 @@ import random
 from collections import defaultdict
 import sklearn.decomposition
 
-regularization_rate = 0.01
+regularization_rate = 0.025
 
 batch_size = 300
 max_iter = 8000
