@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[3]:
 
 
 import numpy as np
@@ -23,7 +23,7 @@ def readGz(f):
 #trying a classification method using something like Jaccard similarity
 
 
-# In[2]:
+# In[4]:
 
 
 data = []
@@ -31,7 +31,7 @@ for l in readGz('train.json.gz'):
     data.append(l)
 
 
-# In[3]:
+# In[5]:
 
 
 random.shuffle(data)
@@ -43,7 +43,7 @@ trainBusinessList = []
 businessList = []
 
 
-# In[4]:
+# In[6]:
 
 
 visitedDict = defaultdict(int)
@@ -62,7 +62,7 @@ for d in validation_data:
         userList.append(d['userID'])
 
 
-# In[5]:
+# In[7]:
 
 
 userDict = defaultdict(int)
@@ -73,7 +73,7 @@ for i in range(len(businessList)):
     businessDict[businessList[i]] = i
 
 
-# In[6]:
+# In[8]:
 
 
 negative_pair = []
@@ -88,7 +88,7 @@ while cnt < 120000:
 #Sampling negative pairs, note that only sample from training_data
 
 
-# In[7]:
+# In[9]:
 
 
 #building lists of user's visited businesses
@@ -102,7 +102,7 @@ for d in train_data:
     b_visited[b][u] = rating
 
 
-# In[8]:
+# In[10]:
 
 
 #Get average rating of all businesses and all users
@@ -111,7 +111,7 @@ businessAvg = [np.mean([b_visited[b][t] for t in b_visited[b]]) for b in range(l
 avgRating = np.mean([d['rating'] for d in train_data])
 
 
-# In[9]:
+# In[11]:
 
 
 def Jaccard(b1, b2):
@@ -122,7 +122,16 @@ def Jaccard(b1, b2):
     return (len(b1Set & b2Set)*1.0)/len(b1Set | b2Set)
 
 
-# In[10]:
+# In[12]:
+
+
+def uJaccard(u1, u2):
+    u1Set = set([b for b in u_visited[u1]])
+    u2Set = set([b for b in u_visited[u2]])
+    return (len(u1Set & u2Set)*1.0)/len(u1Set | u2Set)
+
+
+# In[13]:
 
 
 def Pearson(b1,b2):
@@ -130,19 +139,64 @@ def Pearson(b1,b2):
     b2Set = set([u for u in b_visited[b2]])
     b1rList = []
     b2rList = []
+    uavg = []
     for u in (b1Set & b2Set):
         b1rList.append(b_visited[b1][u])
         b2rList.append(b_visited[b2][u])
+        uavg.append(userAvg[u])
 
     if len(b1Set & b2Set) != 0:
-        cov = np.sum([(b1rList[i]-userAvg[u])*(b2rList[i]-userAvg[u]) for i in range(len(b1rList))])
-        std = math.sqrt(np.sum([(r-userAvg[u])**2 for r in b1rList]) * np.sum(([(r-userAvg[u])**2 for r in b2rList])))
+        cov = np.sum([(b1rList[i]-uavg[i])*(b2rList[i]-uavg[i]) for i in range(len(b1rList))])
+        std = math.sqrt(np.sum([(r-a)**2 for r,a in zip(b1rList, uavg)]) * np.sum(([(r-a)**2 for r,a in zip(b2rList, uavg)])))
         return (cov*1.0)/std if std != 0 else 0
     else:
         return 0
 
 
-# In[11]:
+# In[14]:
+
+
+def uPearson(u1,u2):
+    u1Set = set([b for b in u_visited[u1]])
+    u2Set = set([b for b in u_visited[u2]])
+    u1rList = []
+    u2rList = []
+    bavg = []
+    for b in (u1Set & u2Set):
+        u1rList.append(u_visited[u1][b])
+        u2rList.append(u_visited[u2][b])
+        bavg.append(businessAvg[b])
+
+    if len(u1Set & u2Set) != 0:
+        cov = np.sum([(u1rList[i]-bavg[i])*(u2rList[i]-bavg[i]) for i in range(len(u1rList))])
+        std = math.sqrt(np.sum([(r-a)**2 for r,a in zip(u1rList, bavg)]) * np.sum(([(r-a)**2 for r,a in zip(u2rList, bavg)])))
+        return (cov*1.0)/std if std != 0 else 0
+    else:
+        return 0
+
+
+# In[42]:
+
+
+'''uMostJaccard = [[]for u in trainUserList]
+uMostPearson = [[] for u in trainUserList]
+uLeastPearson = [[] for u in trainUserList]
+for u in range(len(trainUserList)):
+    for v in range(len(trainUserList)):
+        uSet = set([b for b in u_visited[u]])
+        vSet = set([b for b in u_visited[v]])
+        if len(uSet & vSet)>0:
+            jac = uJaccard(u,v)
+            if jac != 0:
+                uMostJaccard[u].append((jac, v))
+    uMostJaccard[u].sort()
+    uMostJaccard[u].reverse()
+    uMostJaccard[u] = uMostJaccard[u][:3]
+
+print uMostJaccard[:10]'''
+
+
+# In[15]:
 
 
 #Get general popularity of business and user
@@ -153,9 +207,11 @@ for d in train_data:
     b = businessDict[d['businessID']]
     businessVisited[b] += 1
     userActivity[u] += 1
+userActivity = np.array(userActivity)/(np.max(userActivity)*1.0)
+businessVisited = np.array(businessVisited)/(np.max(businessVisited))
 
 
-# In[12]:
+# In[16]:
 
 
 #use dictionary to calculate each user's visit popularity
@@ -171,7 +227,7 @@ for u in mostFrequent:
     u.reverse()
 
 
-# In[13]:
+# In[17]:
 
 
 #Get users most rated business and least rated business
@@ -182,13 +238,14 @@ for u in userMostRated:
     u.reverse()
 
 
-# In[14]:
+# In[18]:
 
 
+#add a feature: the top 3 Jaccard Similarity
 def feature(u,b):
     if u < len(trainUserList) and b < len(trainBusinessList):
         visitedBusiness = u_visited[u]
-        feat = [businessAvg[b], userActivity[u], businessVisited[b]]
+        feat = [businessAvg[b]-avgRating, userActivity[u], businessVisited[b]]
         feat.append(Jaccard(b, mostFrequent[u][0][1]))
         feat.append(Jaccard(b, mostFrequent[u][-1][1]))
         feat.append(Jaccard(b, userMostRated[u][0][1]))
@@ -196,7 +253,25 @@ def feature(u,b):
         JaccardList = []
         for b_ in u_visited[u]:
             JaccardList.append(Jaccard(b,b_))
+        JaccardList.sort()
+        JaccardList.reverse()
         feat.append(np.mean(JaccardList))
+        if(len(JaccardList)>0):
+            feat.append(JaccardList[0])
+        else:
+            feat.append(0)
+        if(len(JaccardList)>1):
+            feat.append(JaccardList[1])
+        else:
+            feat.append(0)
+        if(len(JaccardList)>2):
+            feat.append(JaccardList[2])
+        else:
+            feat.append(0)
+        if(len(JaccardList)>3):
+            feat.append(JaccardList[3])
+        else:
+            feat.append(0)
         feat.append(Pearson(b, mostFrequent[u][0][1]))
         feat.append(Pearson(b, mostFrequent[u][-1][1]))
         feat.append(Pearson(b, userMostRated[u][0][1]))
@@ -205,21 +280,48 @@ def feature(u,b):
         for b_ in u_visited[u]:
             PearsonList.append(Pearson(b,b_))
         feat.append(np.mean(PearsonList))
+        PearsonList.sort()
+        PearsonList.reverse()
+        if(len(PearsonList)>0):
+            feat.append(PearsonList[0])
+        else:
+            feat.append(0)
+        if(len(PearsonList)>1):
+            feat.append(PearsonList[1])
+        else:
+            feat.append(0)
+        if(len(PearsonList)>2):
+            feat.append(PearsonList[2])
+        else:
+            feat.append(0)
+        if(len(PearsonList)>3):
+            feat.append(PearsonList[3])
+        else:
+            feat.append(0)
+        if(len(PearsonList)>0):
+            feat.append(PearsonList[-1])
+        else:
+            feat.append(0)
+        if(len(PearsonList)>1):
+            feat.append(PearsonList[-2])
+        else:
+            feat.append(0)
+        #feat.append(np.dot(gammau_[u], gammai_[b]))
         return feat
     elif u < len(trainUserList):
-        feat = [0 for i in range(13)]
+        feat = [0 for i in range(23)]
         feat[1] = userActivity[u]
         return feat
     elif b < len(trainBusinessList):
-        feat = [0 for i in range(13)]
+        feat = [0 for i in range(23)]
         feat[0] = businessAvg[b]
         feat[2] = businessVisited[b]
         return feat
     else:
-        return [0 for i in range(13)]
+        return [0 for i in range(23)]
 
 
-# In[15]:
+# In[19]:
 
 
 train_feature = [feature(userDict[d['userID']], businessDict[d['businessID']]) for d in train_data]
@@ -237,7 +339,7 @@ validation_label = np.array(validation_label)
 print "Feature extracted"
 
 
-# In[41]:
+# In[20]:
 
 
 test_data = []
@@ -250,54 +352,56 @@ for l in open("pairs_Visit.txt"):
         test_data.append((u,b))
 
 
-# In[42]:
+# In[21]:
 
 
-test_feature = np.array([feature(u,b) for u,b in test_data])
+test_feature = np.array([feature(userDict[u],businessDict[b]) for u,b in test_data])
 
 
-# In[29]:
+# In[38]:
 
 
-batch_size = 500
-regularization_rate = 0.005
-input_size = 13
+batch_size = 300
+regularization_rate = 0.1
+input_size = 23
 output_size = 2
 learning_rate = 0.00001
-max_iter = 5000
 
-def calc(X, regularizer, w, b):
-    log = tf.matmul(X,w)+b
-    tf.add_to_collection('losses',regularizer(w))
+max_iter = 30000
+
+
+
+# In[23]:
+
+
+
+def calc(X, regularizer):
+    with tf.variable_scope("log"):
+        w = tf.get_variable(name = 'weight', shape = [input_size, output_size], initializer = tf.truncated_normal_initializer(stddev = 0.05))
+        b = tf.get_variable(name = 'bias', shape = [output_size], initializer = tf.constant_initializer(0.05))
+        log = tf.matmul(X,w)+b
+        tf.add_to_collection('losses',regularizer(w))
     return log
 
 
-# In[17]:
+# In[24]:
 
 
 
 X = tf.placeholder(tf.float32, [None, input_size], name = 'x-input')
 y = tf.placeholder(tf.int64, [None], name = 'y-input')
 regularizer = tf.contrib.layers.l2_regularizer(regularization_rate)
-w = tf.get_variable(name = 'weight', shape = [input_size, output_size], initializer = tf.truncated_normal_initializer(stddev = 0.2))
-b = tf.get_variable(name = 'bias', shape = [output_size], initializer = tf.constant_initializer(0.05))
-y_ = tf.matmul(X, w)+b
+y_ = calc(X, regularizer)
 
 cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = y_, labels = y)
-loss = tf.reduce_mean(cross_entropy)+regularizer(w)
+loss = tf.reduce_mean(cross_entropy)+tf.add_n(tf.get_collection('losses'))
 train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
-correct = tf.cast(tf.equal(tf.argmax(y_,1),y), tf.float32)
+y_predict = tf.argmax(y_,1)
+correct = tf.cast(tf.equal(y_predict,y), tf.float32)
 accuracy = tf.reduce_mean(correct)
 
 
-
-# In[37]:
-
-
-y_predict = tf.argmax(y_,1)
-
-
-# In[45]:
+# In[40]:
 
 
 with tf.Session() as sess:
@@ -307,7 +411,7 @@ with tf.Session() as sess:
         x_batch = train_feature[sample]
         y_batch = train_label[sample]
         _, loss_value = sess.run([train_op, loss], feed_dict = {X:x_batch, y:y_batch})
-        if i % 50 == 0:
+        if i % 200 == 0:
             print("After %d iters, loss on training batch is %f"%(i, loss_value))  
             acc = sess.run(accuracy, feed_dict = {X:validation_feature, y:validation_label})
             print("After %d iters, accuracy on validation is %f"%(i, acc))
